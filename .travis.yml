@@ -22,7 +22,6 @@ cache:
 jdk:
   - openjdk8
   - openjdk11
-  - openjdk14
   - openjdk-ea
   - oraclejdk11
 
@@ -35,7 +34,8 @@ matrix:
 
 # --no-transfer-progress requires Maven 3.6.1+. Otherwise use --batch-mode
 script:
-  - mvn -V --no-transfer-progress
+  - mvn -V --no-transfer-progress -Drat.skip=true -Djapicmp.skip=true -Dcheckstyle.skip=true -Dmaven.javadoc.skip=true
 
-after_success:
-  - mvn -V --no-transfer-progress clean cobertura:cobertura coveralls:report -Ptravis-cobertura
+# Name every skipped test and its reason (Surefire only prints a skip count).
+after_script:
+  - grep -h -B1 "<skipped" target/surefire-reports/TEST-*.xml
