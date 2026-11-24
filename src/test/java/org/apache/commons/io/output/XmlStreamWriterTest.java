@@ -16,10 +16,13 @@
  */
 package org.apache.commons.io.output;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTimeoutPreemptively;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.time.Duration;
 import java.util.Arrays;
 
 import org.junit.jupiter.api.Test;
@@ -154,5 +157,25 @@ public class XmlStreamWriterTest {
     @Test
     public void testEBCDICEncoding() throws IOException {
         checkXmlWriter("simple text in EBCDIC", "CP1047");
+    }
+
+    @Test
+    public void testHostilePrologReDoS() {
+        // A prolog made of many "<?xml" starts made the shared encoding pattern
+        // backtrack quadratically while detecting the encoding (CVE-2024-47554).
+        final StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < 1600; i++) {
+            sb.append("<?xml");
+        }
+        sb.append("?><root/>");
+        final String hostile = sb.toString();
+        assertTimeoutPreemptively(Duration.ofSeconds(10), () -> {
+            for (int i = 0; i < 1000; i++) {
+                final XmlStreamWriter writer = new XmlStreamWriter(new ByteArrayOutputStream());
+                writer.write(hostile);
+                writer.close();
+                assertEquals("UTF-8", writer.getEncoding());
+            }
+        });
     }
 }
